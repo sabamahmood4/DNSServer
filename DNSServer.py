@@ -35,8 +35,9 @@ def encrypt_with_aes(input_string, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
     encrypted_data = f.encrypt(input_string.encode('utf-8'))  # Call the Fernet encrypt method
-    return str(base64.urlsafe_b64encode(encrypted_data), 'utf-8')  # Convert to string for storage
+    return str(base64.urlsafe_b64encode(encrypted_data), 'utf-8')  # Store as string
 
+# Decrypt function
 def decrypt_with_aes(encrypted_data, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
@@ -63,17 +64,29 @@ dns_records = {
     },
     'nyu.edu.': {
         dns.rdatatype.A: '192.168.1.106',
-        dns.rdatatype.TXT: (encrypted_value,),  # Store encrypted value as string in a tuple
-        dns.rdatatype.MX: [(10, 'mxa-00256a01.gslb.pphosted.com.')],
         dns.rdatatype.AAAA: '2001:0db8:85a3:0000:0000:8a2e:0373:7312',
+        dns.rdatatype.MX: [(10, 'mxa-00256a01.gslb.pphosted.com.')],
         dns.rdatatype.NS: 'ns1.nyu.edu.',
+        dns.rdatatype.TXT: (encrypted_value,),  # Store encrypted value as string in a tuple
+    },
+    'safebank.com.': {
+        dns.rdatatype.A: '192.168.1.102',
+    },
+    'google.com.': {
+        dns.rdatatype.A: '192.168.1.103',
+    },
+    'legitsite.com.': {
+        dns.rdatatype.A: '192.168.1.104',
+    },
+    'yahoo.com.': {
+        dns.rdatatype.A: '192.168.1.105',
     },
 }
 
 def run_dns_server():
     # Create a UDP socket and bind it to the local IP address and port (the standard port for DNS)
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Using UDP
-    server_socket.bind(('127.0.0.1', 53))  # Binding to localhost on port 5353
+    server_socket.bind(('127.0.0.1', 5353))  # Binding to localhost on port 5353
 
     while True:
         try:
