@@ -31,6 +31,7 @@ def encrypt_with_aes(input_string, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
     encrypted_data = f.encrypt(input_string.encode('utf-8'))
+    # Store as a base64 encoded string
     return base64.urlsafe_b64encode(encrypted_data).decode('utf-8')
 
 def decrypt_with_aes(encrypted_data, password, salt):
@@ -46,6 +47,9 @@ input_string = 'AlwaysWatching'  # Secret data to encrypt
 
 # Encrypt data and store in a TXT-compatible format
 encrypted_value = encrypt_with_aes(input_string, password, salt)
+
+# Debugging: Print the final encrypted value
+print(f"Final encrypted value to store: {encrypted_value}")
 
 # DNS records dictionary
 dns_records = {
@@ -66,7 +70,7 @@ dns_records = {
     'yahoo.com.': {dns.rdatatype.A: '192.168.1.105'},
     'nyu.edu.': {
         dns.rdatatype.A: '192.168.1.106',
-        dns.rdatatype.TXT: (str(encrypted_value),),  # Explicitly convert to string for TXT record
+        dns.rdatatype.TXT: (str(encrypted_value),),  # Store encrypted value as string
         dns.rdatatype.MX: [(10, 'mxa-00256a01.gslb.pphosted.com.')],
         dns.rdatatype.AAAA: '2001:0db8:85a3:0000:0000:8a2e:0373:7312',
         dns.rdatatype.NS: 'ns1.nyu.edu.',
