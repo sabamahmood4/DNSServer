@@ -17,6 +17,8 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import base64
 
+
+# Key generation for AES encryption
 def generate_aes_key(password, salt):
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
@@ -27,24 +29,29 @@ def generate_aes_key(password, salt):
     key = base64.urlsafe_b64encode(kdf.derive(password.encode('utf-8')))
     return key
 
+
+# Encrypting data
 def encrypt_with_aes(input_string, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
     encrypted_data = f.encrypt(input_string.encode('utf-8'))
-    return str(encrypted_data, 'utf-8')  # Convert encrypted data to string
+    return str(base64.urlsafe_b64encode(encrypted_data), 'utf-8')  # Convert to string
 
+
+# Decrypting data
 def decrypt_with_aes(encrypted_data, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
-    encrypted_data_bytes = base64.urlsafe_b64decode(encrypted_data)
-    return f.decrypt(encrypted_data_bytes).decode('utf-8')
+    encrypted_data_bytes = base64.urlsafe_b64decode(encrypted_data)  # Decode from base64
+    return f.decrypt(encrypted_data_bytes).decode('utf-8')  # Return decrypted value
+
 
 # Prepare encryption parameters
-salt = b'Tandon'  # Salt as byte object
-password = 'sm12882@nyu.edu'  # Your registered NYU email
+salt = b'Tandon'  # Ensure salt is bytes
+password = 'sm12882@nyu.edu'  # Your NYU email
 input_string = 'AlwaysWatching'  # Secret data to encrypt
 
-# Encrypt data and store in a TXT-compatible format
+# Encrypt data
 encrypted_value = encrypt_with_aes(input_string, password, salt)
 
 # DNS records dictionary
@@ -66,12 +73,13 @@ dns_records = {
     'yahoo.com.': {dns.rdatatype.A: '192.168.1.105'},
     'nyu.edu.': {
         dns.rdatatype.A: '192.168.1.106',
-        dns.rdatatype.TXT: (str(encrypted_value),),  # Store encrypted value as string for TXT
+        dns.rdatatype.TXT: (str(encrypted_value),),  # Store encrypted value as a string
         dns.rdatatype.MX: [(10, 'mxa-00256a01.gslb.pphosted.com.')],
         dns.rdatatype.AAAA: '2001:0db8:85a3:0000:0000:8a2e:0373:7312',
         dns.rdatatype.NS: 'ns1.nyu.edu.',
     }
 }
+
 
 def run_dns_server():
     # Create a UDP socket and bind to the local IP and DNS port 53
@@ -99,7 +107,7 @@ def run_dns_server():
                 if qtype == dns.rdatatype.MX:
                     for pref, server in answer_data:
                         rdata_list.append(MX(dns.rdataclass.IN, dns.rdatatype.MX, pref, server))
-                
+
                 # Handle other record types
                 else:
                     if isinstance(answer_data, str):
@@ -108,9 +116,8 @@ def run_dns_server():
                         rdata_list = [dns.rdata.from_text(dns.rdataclass.IN, qtype, data) for data in answer_data]
 
                 for rdata in rdata_list:
-                    rrset = dns.rrset.RRset(question.name, dns.rdataclass.IN, qtype)
-                    rrset.add(rdata)
-                    response.answer.append(rrset)
+                    response.answer.append(dns.rrset.RRset(question.name, dns.rdataclass.IN, qtype))
+                    response.answer[-1].add(rdata)
 
             # Set Authoritative Answer (AA) flag
             response.flags |= 1 << 10
@@ -123,6 +130,7 @@ def run_dns_server():
             print('\nExiting...')
             server_socket.close()
             sys.exit(0)
+
 
 def run_dns_server_user():
     print("Input 'q' and hit 'enter' to quit")
@@ -139,6 +147,7 @@ def run_dns_server_user():
     input_thread.daemon = True
     input_thread.start()
     run_dns_server()
+
 
 if __name__ == '__main__':
     run_dns_server_user()
