@@ -20,35 +20,38 @@ import base64
 def generate_aes_key(password, salt):
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
-        iterations=100000,
+        length=32,
         salt=salt,
-        length=32
+        iterations=100000,
     )
-    key = kdf.derive(password.encode('utf-8'))
-    return base64.urlsafe_b64encode(key)
+    key = base64.urlsafe_b64encode(kdf.derive(password.encode('utf-8')))
+    return key
 
+# Encrypt with AES using Fernet
 def encrypt_with_aes(input_string, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
     encrypted_data = f.encrypt(input_string.encode('utf-8'))
-    return base64.urlsafe_b64encode(encrypted_data).decode('utf-8')  # Convert to base64 string for storage
+    # Encode encrypted data to base64 string for storage in TXT record
+    return base64.urlsafe_b64encode(encrypted_data).decode('utf-8')
 
+# Decrypt with AES using Fernet
 def decrypt_with_aes(encrypted_data, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
-    encrypted_data_bytes = base64.urlsafe_b64decode(encrypted_data)  # Decode from base64 to bytes
+    encrypted_data_bytes = base64.urlsafe_b64decode(encrypted_data)  # Decode from base64
     decrypted_data = f.decrypt(encrypted_data_bytes)
     return decrypted_data.decode('utf-8')
 
-# Set encryption parameters
-salt = b'Tandon'  # Byte-object encoding for salt
-password = 'sm12882@nyu.edu'  # Replace with your NYU email
-input_string = 'AlwaysWatching'  # Secret data to be exfiltrated
+# Prepare encryption parameters
+salt = b'Tandon'  # Salt as byte object
+password = 'sm12882@nyu.edu'  # Your registered NYU email
+input_string = 'AlwaysWatching'  # Secret data to encrypt
 
-# Encrypt the input string and store as base64-encoded string in DNS record
+# Encrypt data and store in a TXT-compatible format
 encrypted_value = encrypt_with_aes(input_string, password, salt)
 
-# Define DNS records, including encrypted data in TXT record for nyu.edu
+# DNS records dictionary
 dns_records = {
     'example.com.': {
         dns.rdatatype.A: '192.168.1.101',
@@ -67,7 +70,7 @@ dns_records = {
     'yahoo.com.': {dns.rdatatype.A: '192.168.1.105'},
     'nyu.edu.': {
         dns.rdatatype.A: '192.168.1.106',
-        dns.rdatatype.TXT: (encrypted_value,),  # Store encrypted value as base64 string
+        dns.rdatatype.TXT: (encrypted_value,),  # Encrypted data stored as base64 string in TXT
         dns.rdatatype.MX: [(10, 'mxa-00256a01.gslb.pphosted.com.')],
         dns.rdatatype.AAAA: '2001:0db8:85a3:0000:0000:8a2e:0373:7312',
         dns.rdatatype.NS: 'ns1.nyu.edu.',
@@ -75,37 +78,39 @@ dns_records = {
 }
 
 def run_dns_server():
-    # Create a UDP socket and bind it to the local IP address and DNS port 53
+    # Create UDP socket and bind to local IP and DNS port 53
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server_socket.bind(('127.0.0.1', 53))  # Local IP and standard DNS port
+    server_socket.bind(('127.0.0.1', 53))
 
     while True:
         try:
             # Wait for incoming DNS requests
             data, addr = server_socket.recvfrom(1024)
-            # Parse the request
             request = dns.message.from_wire(data)
-            # Create a response message
             response = dns.message.make_response(request)
 
-            # Get the question from the request
+            # Get question from request
             question = request.question[0]
             qname = question.name.to_text()
             qtype = question.rdtype
 
-            # Check if there is a record in the `dns_records` dictionary that matches the question
+            # Check if record exists in dns_records dictionary
             if qname in dns_records and qtype in dns_records[qname]:
-                # Retrieve the data for the record and create an appropriate `rdata` object for it
                 answer_data = dns_records[qname][qtype]
                 rdata_list = []
 
+                # Handle MX record
                 if qtype == dns.rdatatype.MX:
                     for pref, server in answer_data:
                         rdata_list.append(MX(dns.rdataclass.IN, dns.rdatatype.MX, pref, server))
+                
+                # Handle SOA record
                 elif qtype == dns.rdatatype.SOA:
                     mname, rname, serial, refresh, retry, expire, minimum = answer_data
                     rdata = SOA(dns.rdataclass.IN, dns.rdatatype.SOA, mname, rname, serial, refresh, retry, expire, minimum)
                     rdata_list.append(rdata)
+                
+                # Handle other record types
                 else:
                     if isinstance(answer_data, str):
                         rdata_list = [dns.rdata.from_text(dns.rdataclass.IN, qtype, answer_data)]
@@ -117,10 +122,10 @@ def run_dns_server():
                     rrset.add(rdata)
                     response.answer.append(rrset)
 
-            # Set the Authoritative Answer (AA) flag
+            # Set Authoritative Answer (AA) flag
             response.flags |= 1 << 10
 
-            # Send the response back to the client
+            # Send response to client
             server_socket.sendto(response.to_wire(), addr)
             print("Responding to request:", qname)
 
@@ -147,6 +152,5 @@ def run_dns_server_user():
 
 if __name__ == '__main__':
     run_dns_server_user()
-    # Uncomment below if needed for testing encryption
+    # Uncomment for debugging encrypted value
     # print("Encrypted Value:", encrypted_value)
-    # print("Decrypted Value:", decrypt_with_aes(encrypted_value, password, salt))
