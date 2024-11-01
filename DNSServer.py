@@ -43,13 +43,12 @@ def decrypt_with_aes(encrypted_data, password, salt):
 
 # Encryption parameters
 salt = b'Tandon'  # Byte-object encoding
-password = 'your_nyu_email@nyu.edu'  # Replace with your NYU email
+password = 'sm12882@nyu.edu'  # Replace with your NYU email
 input_string = 'AlwaysWatching'  # Secret data to be exfiltrated
 
+# Encrypt the input string
 encrypted_value = encrypt_with_aes(input_string, password, salt)
-decrypted_value = decrypt_with_aes(encrypted_value, password, salt)
-
-# DNS Records
+# Store the encrypted value as a UTF-8 string in the DNS record for compatibility
 dns_records = {
     'example.com.': {
         dns.rdatatype.A: '192.168.1.101',
@@ -68,7 +67,7 @@ dns_records = {
     'yahoo.com.': {dns.rdatatype.A: '192.168.1.105'},
     'nyu.edu.': {
         dns.rdatatype.A: '192.168.1.106',
-        dns.rdatatype.TXT: (encrypted_value.decode('utf-8'),),
+        dns.rdatatype.TXT: (encrypted_value.decode('utf-8'),),  # Store encrypted value as string
         dns.rdatatype.MX: [(10, 'mxa-00256a01.gslb.pphosted.com.')],
         dns.rdatatype.AAAA: '2001:0db8:85a3:0000:0000:8a2e:0373:7312',
         dns.rdatatype.NS: 'ns1.nyu.edu.',
