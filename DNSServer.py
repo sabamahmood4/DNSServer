@@ -12,12 +12,10 @@ import signal
 import os
 import sys
 
-
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import base64
-
 
 def generate_aes_key(password, salt):
     kdf = PBKDF2HMAC(
@@ -29,7 +27,6 @@ def generate_aes_key(password, salt):
     key = base64.urlsafe_b64encode(kdf.derive(password.encode('utf-8')))
     return key
 
-
 def encrypt_with_aes(input_string, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
@@ -37,13 +34,11 @@ def encrypt_with_aes(input_string, password, salt):
     # Directly convert to a string representation
     return str(base64.urlsafe_b64encode(encrypted_data), 'utf-8')
 
-
 def decrypt_with_aes(encrypted_data, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
     encrypted_data_bytes = base64.urlsafe_b64decode(encrypted_data)
     return f.decrypt(encrypted_data_bytes).decode('utf-8')
-
 
 # Prepare encryption parameters
 salt = b'Tandon'  # Salt as byte object
@@ -79,11 +74,10 @@ dns_records = {
     }
 }
 
-
 def run_dns_server():
     # Create a UDP socket and bind to the local IP and DNS port 53
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server_socket.bind(('127.0.0.1', 5353))
+    server_socket.bind(('127.0.0.1', 53))
 
     while True:
         try:
@@ -106,14 +100,13 @@ def run_dns_server():
                 if qtype == dns.rdatatype.MX:
                     for pref, server in answer_data:
                         rdata_list.append(MX(dns.rdataclass.IN, dns.rdatatype.MX, pref, server))
-
+                
                 # Handle SOA record
                 elif qtype == dns.rdatatype.SOA:
                     mname, rname, serial, refresh, retry, expire, minimum = answer_data
-                    rdata = SOA(dns.rdataclass.IN, dns.rdatatype.SOA, mname, rname, serial, refresh, retry, expire,
-                                minimum)
+                    rdata = SOA(dns.rdataclass.IN, dns.rdatatype.SOA, mname, rname, serial, refresh, retry, expire, minimum)
                     rdata_list.append(rdata)
-
+                
                 # Handle other record types
                 else:
                     if isinstance(answer_data, str):
@@ -138,7 +131,6 @@ def run_dns_server():
             server_socket.close()
             sys.exit(0)
 
-
 def run_dns_server_user():
     print("Input 'q' and hit 'enter' to quit")
     print("DNS server is running...")
@@ -154,7 +146,6 @@ def run_dns_server_user():
     input_thread.daemon = True
     input_thread.start()
     run_dns_server()
-
 
 if __name__ == '__main__':
     run_dns_server_user()
