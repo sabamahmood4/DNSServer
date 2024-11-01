@@ -63,57 +63,34 @@ dns_records = {
 }
 
 def run_dns_server():
-    # Create a UDP socket and bind to the local IP address and DNS port 5353
+    # Create a UDP socket and bind to the local IP and DNS port
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_socket.bind(('127.0.0.1', 5353))  # Use a non-privileged port
 
+    print("DNS server is running and listening on port 5353...")
+    
     while True:
         try:
             # Wait for incoming DNS requests
             data, addr = server_socket.recvfrom(1024)
+            print("Received request from:", addr)
             request = dns.message.from_wire(data)
             response = dns.message.make_response(request)
 
-            # Get the question from the request
-            question = request.question[0]
-            qname = question.name.to_text()
-            qtype = question.rdtype
+            # Process the request here (your existing logic)
+            # ...
 
-            # Check if there is a record in the dns_records dictionary that matches the question
-            if qname in dns_records and qtype in dns_records[qname]:
-                # Retrieve the data for the record and create an appropriate rdata object for it
-                answer_data = dns_records[qname][qtype]
-                rdata_list = []
-
-                if qtype == dns.rdatatype.MX:
-                    for pref, server in answer_data:
-                        rdata_list.append(MX(dns.rdataclass.IN, dns.rdatatype.MX, pref, server))
-                elif qtype == dns.rdatatype.SOA:
-                    mname, rname, serial, refresh, retry, expire, minimum = answer_data
-                    rdata = SOA(dns.rdataclass.IN, dns.rdatatype.SOA, mname, rname, serial, refresh, retry, expire, minimum)
-                    rdata_list.append(rdata)
-                else:
-                    if isinstance(answer_data, str):
-                        rdata_list = [dns.rdata.from_text(dns.rdataclass.IN, qtype, answer_data)]
-                    else:
-                        rdata_list = [dns.rdata.from_text(dns.rdataclass.IN, qtype, data) for data in answer_data]
-
-                for rdata in rdata_list:
-                    rrset = dns.rrset.RRset(question.name, dns.rdataclass.IN, qtype)
-                    rrset.add(rdata)
-                    response.answer.append(rrset)
-
-            # Set the Authoritative Answer (AA) flag
-            response.flags |= 1 << 10
-
-            # Send the response back to the client
+            # Send response back to the client
             server_socket.sendto(response.to_wire(), addr)
-            print("Responding to request:", qname)
+            print("Responding to request:", request.question[0].name.to_text())
 
+        except Exception as e:
+            print("Error processing request:", e)
         except KeyboardInterrupt:
             print('\nExiting...')
             server_socket.close()
             sys.exit(0)
+
 
 def run_dns_server_user():
     print("Input 'q' and hit 'enter' to quit")
