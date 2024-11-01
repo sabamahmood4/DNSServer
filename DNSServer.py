@@ -31,22 +31,21 @@ def encrypt_with_aes(input_string, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
     encrypted_data = f.encrypt(input_string.encode('utf-8'))
-    return str(base64.urlsafe_b64encode(encrypted_data), 'utf-8')  # Convert to string
+    return str(base64.urlsafe_b64encode(encrypted_data), 'utf-8')  # Ensure this is stored as a string
 
 def decrypt_with_aes(encrypted_data, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
-    encrypted_data_bytes = base64.urlsafe_b64decode(encrypted_data)  # Decode the string back to bytes
-    return f.decrypt(encrypted_data_bytes).decode('utf-8')  # Decrypt and convert to string
+    encrypted_data_bytes = base64.urlsafe_b64decode(encrypted_data)  # Decode to bytes
+    return f.decrypt(encrypted_data_bytes).decode('utf-8')  # Decrypt and convert back to string
 
-# Prepare encryption parameters
+# Prepare Encryption Parameters
 salt = b'Tandon'  # Salt as byte object
 password = 'sm12882@nyu.edu'  # Your NYU email
 input_string = 'AlwaysWatching'  # Secret data to encrypt
 
 # Encrypt the secret data
 encrypted_value = encrypt_with_aes(input_string, password, salt)
-print("Encrypted Value:", encrypted_value)  # For debugging
 
 # A dictionary containing DNS records mapping hostnames to different types of DNS data.
 dns_records = {
@@ -60,31 +59,36 @@ dns_records = {
     },
     'nyu.edu.': {
         dns.rdatatype.A: '192.168.1.106',
-        dns.rdatatype.TXT: (encrypted_value,),  # Store encrypted value as string
+        dns.rdatatype.TXT: (encrypted_value,),  # Store encrypted value as string in a tuple
         dns.rdatatype.MX: [(10, 'mxa-00256a01.gslb.pphosted.com.')],
         dns.rdatatype.AAAA: '2001:0db8:85a3:0000:0000:8a2e:0373:7312',
         dns.rdatatype.NS: 'ns1.nyu.edu.',
     },
-    # Additional records can be added here...
+    # Add more records if necessary
 }
 
 def run_dns_server():
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Create a UDP socket
-    server_socket.bind(('127.0.0.1', 5353))  # Bind to localhost on port 5353
+    # Create a UDP socket and bind it to the local IP address and port (the standard port for DNS)
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Using UDP
+    server_socket.bind(('127.0.0.1', 5353))  # Using port 5353 to avoid permission issues
 
     while True:
         try:
-            data, addr = server_socket.recvfrom(1024)  # Receive data from clients
-            request = dns.message.from_wire(data)  # Parse the request
-            response = dns.message.make_response(request)  # Create a response message
+            # Wait for incoming DNS requests
+            data, addr = server_socket.recvfrom(1024)
+            # Parse the request using the `dns.message.from_wire` method
+            request = dns.message.from_wire(data)
+            # Create a response message using the `dns.message.make_response` method
+            response = dns.message.make_response(request)
 
             # Get the question from the request
             question = request.question[0]
             qname = question.name.to_text()
             qtype = question.rdtype
 
-            # Check if the record exists in the dns_records dictionary
+            # Check if there is a record in the `dns_records` dictionary that matches the question
             if qname in dns_records and qtype in dns_records[qname]:
+                # Retrieve the data for the record and create an appropriate `rdata` object for it
                 answer_data = dns_records[qname][qtype]
                 rdata_list = []
 
