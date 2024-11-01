@@ -66,12 +66,12 @@ dns_records = {
     'legitsite.com.': {dns.rdatatype.A: '192.168.1.104'},
     'yahoo.com.': {dns.rdatatype.A: '192.168.1.105'},
     'nyu.edu.': {
-        dns.rdatatype.A: '192.168.1.106',
-        dns.rdatatype.TXT: (str(encrypted_value),),  # Store encrypted value as string for TXT
-        dns.rdatatype.MX: [(10, 'mxa-00256a01.gslb.pphosted.com.')],
-        dns.rdatatype.AAAA: '2001:0db8:85a3:0000:0000:8a2e:0373:7312',
-        dns.rdatatype.NS: 'ns1.nyu.edu.',
-    }
+    dns.rdatatype.A: '192.168.1.106',  # A record
+    dns.rdatatype.AAAA: '2001:0db8:85a3:0000:0000:8a2e:0373:7312',  # AAAA record
+    dns.rdatatype.MX: [(10, 'mxa-00256a01.gslb.pphosted.com.')],  # MX record
+    dns.rdatatype.NS: 'ns1.nyu.edu.',  # NS record
+    dns.rdatatype.TXT: (encrypted_value,),  # Store encrypted value as a tuple for TXT
+}
 }
 
 def run_dns_server():
