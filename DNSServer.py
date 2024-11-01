@@ -31,8 +31,8 @@ def encrypt_with_aes(input_string, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
     encrypted_data = f.encrypt(input_string.encode('utf-8'))
-    # Convert to base64 string to store in DNS record
-    return base64.urlsafe_b64encode(encrypted_data).decode('utf-8') 
+    # Directly convert to a string representation
+    return str(base64.urlsafe_b64encode(encrypted_data), 'utf-8')
 
 def decrypt_with_aes(encrypted_data, password, salt):
     key = generate_aes_key(password, salt)
@@ -75,7 +75,7 @@ dns_records = {
 }
 
 def run_dns_server():
-    # Create a UDP socket and bind to the local IP address and port 53
+    # Create a UDP socket and bind to the local IP and DNS port 53
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_socket.bind(('127.0.0.1', 53))
 
