@@ -1,4 +1,3 @@
-#Saba Mahmood
 import dns.message
 import dns.rdatatype
 import dns.rdataclass
@@ -32,14 +31,12 @@ def encrypt_with_aes(input_string, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
     encrypted_data = f.encrypt(input_string.encode('utf-8'))
-    print("Encrypted data before storage (base64):", base64.urlsafe_b64encode(encrypted_data).decode('utf-8'))
     return base64.urlsafe_b64encode(encrypted_data).decode('utf-8')  # Convert to base64 string for storage
 
 def decrypt_with_aes(encrypted_data, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
     encrypted_data_bytes = base64.urlsafe_b64decode(encrypted_data)  # Decode from base64 to bytes
-    print("Encrypted data after retrieval (base64):", encrypted_data)
     decrypted_data = f.decrypt(encrypted_data_bytes)
     return decrypted_data.decode('utf-8')
 
