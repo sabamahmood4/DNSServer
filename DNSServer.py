@@ -2,7 +2,6 @@ import dns.message
 import dns.rdatatype
 import dns.rdataclass
 import dns.rdtypes
-import dns.rdtypes.ANY
 from dns.rdtypes.ANY.MX import MX
 from dns.rdtypes.ANY.SOA import SOA
 import dns.rdata
@@ -12,10 +11,10 @@ import signal
 import os
 import sys
 
+from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import base64
-from cryptography.fernet import Fernet
 
 def generate_aes_key(password, salt):
     kdf = PBKDF2HMAC(
@@ -31,49 +30,40 @@ def encrypt_with_aes(input_string, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
     encrypted_data = f.encrypt(input_string.encode('utf-8'))
-    return encrypted_data  # Return encrypted data as bytes
+    # Base64 encode the encrypted data
+    encrypted_data_b64 = base64.urlsafe_b64encode(encrypted_data).decode('utf-8')
+    return encrypted_data_b64  # Return as a string
 
-def decrypt_with_aes(encrypted_data, password, salt):
+def decrypt_with_aes(encrypted_data_b64, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
-    return f.decrypt(encrypted_data).decode('utf-8')  # Decrypt and convert back to string
+    # Base64 decode the encrypted data
+    encrypted_data = base64.urlsafe_b64decode(encrypted_data_b64.encode('utf-8'))
+    decrypted_data = f.decrypt(encrypted_data)
+    return decrypted_data.decode('utf-8')
 
 # Prepare encryption parameters
 salt = b'Tandon'  # Salt as byte object
-password = 'sm12882@nyu.edu'  # Your registered NYU email
+password = 'sm12882@nyu.edu'  # Replace with your NYU email
 input_string = 'AlwaysWatching'  # Secret data to encrypt
 
 # Encrypt data for TXT record
-encrypted_value = encrypt_with_aes(input_string, password, salt)
+encrypted_value_b64 = encrypt_with_aes(input_string, password, salt)
 
 # DNS Records
 dns_records = {
-    'example.com.': {
-        dns.rdatatype.A: '192.168.1.101',
-        dns.rdatatype.AAAA: '2001:0db8:85a3:0000:0000:8a2e:0370:7334',
-        dns.rdatatype.MX: [(10, 'mail.example.com.')],
-        dns.rdatatype.CNAME: 'www.example.com.',
-        dns.rdatatype.NS: 'ns.example.com.',
-        dns.rdatatype.TXT: ('This is a TXT record',),
-        dns.rdatatype.SOA: (
-            'ns1.example.com.', 'admin@example.com.', 2023081401, 3600, 1800, 604800, 86400
-        ),
-    },
-    'safebank.com.': {dns.rdatatype.A: '192.168.1.102'},
-    'google.com.': {dns.rdatatype.A: '192.168.1.103'},
-    'legitsite.com.': {dns.rdatatype.A: '192.168.1.104'},
-    'yahoo.com.': {dns.rdatatype.A: '192.168.1.105'},
     'nyu.edu.': {
         dns.rdatatype.A: '192.168.1.106',
-        dns.rdatatype.TXT: (str(base64.urlsafe_b64encode(encrypted_value), 'utf-8'),),  # Store encrypted value as a string
+        dns.rdatatype.TXT: (encrypted_value_b64,),  # Store Base64 string
         dns.rdatatype.MX: [(10, 'mxa-00256a01.gslb.pphosted.com.')],
         dns.rdatatype.AAAA: '2001:0db8:85a3:0000:0000:8a2e:0373:7312',
         dns.rdatatype.NS: 'ns1.nyu.edu.',
-    }
+    },
+    # ... other domains
 }
 
 def run_dns_server():
-    # Create a UDP socket and bind to the local IP address and DNS port 53
+    # Create a UDP socket and bind to the local IP address and DNS port 5353
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_socket.bind(('127.0.0.1', 5353))  # Use a non-privileged port
 
@@ -116,7 +106,7 @@ def run_dns_server():
             # Set the Authoritative Answer (AA) flag
             response.flags |= 1 << 10
 
-            # Send response back to the client
+            # Send the response back to the client
             server_socket.sendto(response.to_wire(), addr)
             print("Responding to request:", qname)
 
