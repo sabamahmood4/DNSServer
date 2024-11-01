@@ -31,7 +31,7 @@ def encrypt_with_aes(input_string, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
     encrypted_data = f.encrypt(input_string.encode('utf-8'))
-    return str(base64.urlsafe_b64encode(encrypted_data), 'utf-8')  # Ensure this is stored as a string
+    return str(base64.urlsafe_b64encode(encrypted_data), 'utf-8')  # Convert to string
 
 def decrypt_with_aes(encrypted_data, password, salt):
     key = generate_aes_key(password, salt)
@@ -76,6 +76,8 @@ def run_dns_server():
         try:
             # Wait for incoming DNS requests
             data, addr = server_socket.recvfrom(1024)
+            print("Received data from:", addr)  # Debug print
+            
             # Parse the request using the `dns.message.from_wire` method
             request = dns.message.from_wire(data)
             # Create a response message using the `dns.message.make_response` method
@@ -85,25 +87,21 @@ def run_dns_server():
             question = request.question[0]
             qname = question.name.to_text()
             qtype = question.rdtype
+            print("Processing request for:", qname, "Type:", qtype)  # Debug print
 
-            # Check if there is a record in the `dns_records` dictionary that matches the question
+            # Check if the record exists in the `dns_records` dictionary
             if qname in dns_records and qtype in dns_records[qname]:
-                # Retrieve the data for the record and create an appropriate `rdata` object for it
                 answer_data = dns_records[qname][qtype]
                 rdata_list = []
 
+                # Handling different DNS record types
                 if qtype == dns.rdatatype.MX:
                     for pref, server in answer_data:
                         rdata_list.append(MX(dns.rdataclass.IN, dns.rdatatype.MX, pref, server))
-                elif qtype == dns.rdatatype.SOA:
-                    mname, rname, serial, refresh, retry, expire, minimum = answer_data
-                    rdata = SOA(dns.rdataclass.IN, dns.rdatatype.SOA, mname, rname, serial, refresh, retry, expire, minimum)
-                    rdata_list.append(rdata)
-                else:
-                    if isinstance(answer_data, str):
-                        rdata_list = [dns.rdata.from_text(dns.rdataclass.IN, qtype, answer_data)]
-                    else:
-                        rdata_list = [dns.rdata.from_text(dns.rdataclass.IN, qtype, data) for data in answer_data]
+                elif qtype == dns.rdatatype.A:
+                    rdata_list.append(dns.rdata.from_text(dns.rdataclass.IN, qtype, answer_data))
+                elif qtype == dns.rdatatype.TXT:
+                    rdata_list.append(dns.rdata.from_text(dns.rdataclass.IN, qtype, answer_data[0]))
 
                 for rdata in rdata_list:
                     response.answer.append(dns.rrset.RRset(question.name, dns.rdataclass.IN, qtype))
@@ -111,7 +109,7 @@ def run_dns_server():
 
             # Set the AA (Authoritative Answer) flag
             response.flags |= dns.flags.AA
-
+            
             # Send the response back to the client
             print("Responding to request:", qname)
             server_socket.sendto(response.to_wire(), addr)
