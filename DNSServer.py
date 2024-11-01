@@ -47,6 +47,9 @@ input_string = 'AlwaysWatching'  # Secret data to encrypt
 # Encrypt data and store in a TXT-compatible format
 encrypted_value = encrypt_with_aes(input_string, password, salt)
 
+# Debugging: Print the final encrypted value
+print(f"Final encrypted value to store: {encrypted_value}")
+
 # DNS records dictionary
 dns_records = {
     'example.com.': {
