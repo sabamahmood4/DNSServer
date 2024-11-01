@@ -25,19 +25,19 @@ def generate_aes_key(password, salt):
         length=32
     )
     key = kdf.derive(password.encode('utf-8'))
-    key = base64.urlsafe_b64encode(key)
-    return key
+    return base64.urlsafe_b64encode(key)
 
 def encrypt_with_aes(input_string, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
     encrypted_data = f.encrypt(input_string.encode('utf-8'))
-    return encrypted_data    
+    return base64.urlsafe_b64encode(encrypted_data).decode('utf-8')  # Convert to base64 string for storage
 
 def decrypt_with_aes(encrypted_data, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
-    decrypted_data = f.decrypt(encrypted_data)
+    encrypted_data_bytes = base64.urlsafe_b64decode(encrypted_data)  # Decode from base64 to bytes
+    decrypted_data = f.decrypt(encrypted_data_bytes)
     return decrypted_data.decode('utf-8')
 
 # Set encryption parameters
@@ -45,7 +45,7 @@ salt = b'Tandon'  # Byte-object encoding for salt
 password = 'sm12882@nyu.edu'  # Replace with your NYU email
 input_string = 'AlwaysWatching'  # Secret data to be exfiltrated
 
-# Encrypt the input string and store as UTF-8 string in DNS record
+# Encrypt the input string and store as base64-encoded string in DNS record
 encrypted_value = encrypt_with_aes(input_string, password, salt)
 
 # Define DNS records, including encrypted data in TXT record for nyu.edu
@@ -67,7 +67,7 @@ dns_records = {
     'yahoo.com.': {dns.rdatatype.A: '192.168.1.105'},
     'nyu.edu.': {
         dns.rdatatype.A: '192.168.1.106',
-        dns.rdatatype.TXT: (encrypted_value.decode('utf-8'),),  # Store encrypted value as string
+        dns.rdatatype.TXT: (encrypted_value,),  # Store encrypted value as base64 string
         dns.rdatatype.MX: [(10, 'mxa-00256a01.gslb.pphosted.com.')],
         dns.rdatatype.AAAA: '2001:0db8:85a3:0000:0000:8a2e:0373:7312',
         dns.rdatatype.NS: 'ns1.nyu.edu.',
@@ -149,4 +149,4 @@ if __name__ == '__main__':
     run_dns_server_user()
     # Uncomment below if needed for testing encryption
     # print("Encrypted Value:", encrypted_value)
-    # print("Decrypted Value:", decrypted_value)
+    # print("Decrypted Value:", decrypt_with_aes(encrypted_value, password, salt))
