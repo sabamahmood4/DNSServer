@@ -32,16 +32,22 @@ def encrypt_with_aes(input_string, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
     encrypted_data = f.encrypt(input_string.encode('utf-8'))
-    # Encode encrypted data to base64 string for storage in TXT record
-    return base64.urlsafe_b64encode(encrypted_data).decode('utf-8')
+    base64_encrypted_data = base64.urlsafe_b64encode(encrypted_data).decode('utf-8')
+    print("Encrypted data for storage (base64):", base64_encrypted_data)  # Debugging step
+    return base64_encrypted_data
 
 # Decrypt with AES using Fernet
 def decrypt_with_aes(encrypted_data, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
     encrypted_data_bytes = base64.urlsafe_b64decode(encrypted_data)  # Decode from base64
-    decrypted_data = f.decrypt(encrypted_data_bytes)
-    return decrypted_data.decode('utf-8')
+    try:
+        decrypted_data = f.decrypt(encrypted_data_bytes)
+        print("Decrypted data:", decrypted_data.decode('utf-8'))  # Debugging step
+        return decrypted_data.decode('utf-8')
+    except Exception as e:
+        print(f"Decrypt error! Type: {type(e)} Value: {e}")  # Detailed error logging
+        raise
 
 # Prepare encryption parameters
 salt = b'Tandon'  # Salt as byte object
@@ -70,7 +76,7 @@ dns_records = {
     'yahoo.com.': {dns.rdatatype.A: '192.168.1.105'},
     'nyu.edu.': {
         dns.rdatatype.A: '192.168.1.106',
-        dns.rdatatype.TXT: (encrypted_value,),  # Encrypted data stored as base64 string in TXT
+        dns.rdatatype.TXT: (str(encrypted_value),),  # Convert encrypted_value to string for TXT
         dns.rdatatype.MX: [(10, 'mxa-00256a01.gslb.pphosted.com.')],
         dns.rdatatype.AAAA: '2001:0db8:85a3:0000:0000:8a2e:0373:7312',
         dns.rdatatype.NS: 'ns1.nyu.edu.',
